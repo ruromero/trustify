@@ -134,7 +134,12 @@ async fn change_ps_list_vulns(ctx: &TrustifyContext) -> anyhow::Result<()> {
     // get vuln by purl
 
     let results = service
-        .fetch_purl_details(&[purl.head.uuid.to_string()], Deprecation::Ignore, &ctx.db)
+        .fetch_purl_details(
+            &[purl.head.uuid.to_string()],
+            Deprecation::Ignore,
+            &ctx.db,
+            None,
+        )
         .await
         .expect("must find something");
 
@@ -235,6 +240,7 @@ async fn change_ps_list_vulns_all(ctx: &TrustifyContext) -> anyhow::Result<()> {
             &[purl.head.uuid.to_string()],
             Deprecation::Consider,
             &ctx.db,
+            None,
         )
         .await
         .expect("must find something");

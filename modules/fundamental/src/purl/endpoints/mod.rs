@@ -7,7 +7,11 @@ use crate::{
 };
 use actix_web::{HttpResponse, Responder, get, post, web};
 use trustify_auth::{ReadSbom, authorizer::Require};
-use trustify_common::{db::Database, db::query::Query, model::Paginated, model::PaginatedResults};
+use trustify_common::{
+    db::{Database, query::Query},
+    model::{Paginated, PaginatedResults},
+};
+use trustify_module_ingestor::service::IngestorService;
 
 use super::model::details::purl::{PurlsRequest, PurlsResponse};
 
@@ -48,6 +52,7 @@ pub fn configure(config: &mut utoipa_actix_web::service_config::ServiceConfig, d
 /// Retrieve details of a fully-qualified pURL
 pub async fn get(
     service: web::Data<PurlService>,
+    ingestor: web::Data<IngestorService>,
     db: web::Data<Database>,
     key: web::Path<String>,
     web::Query(Deprecation { deprecated }): web::Query<Deprecation>,
@@ -56,7 +61,12 @@ pub async fn get(
     let result_key = key.into_inner();
     let identifiers = [&result_key];
     match service
-        .fetch_purl_details(&identifiers, deprecated, db.as_ref())
+        .fetch_purl_details(
+            &identifiers,
+            deprecated,
+            db.as_ref(),
+            Some(ingestor.as_ref()),
+        )
         .await
     {
         Ok(details) => match details.get(result_key.as_str()) {
@@ -83,14 +93,16 @@ pub async fn get(
 /// Retrieve details for multiple qualified PURLs
 pub async fn get_multiple(
     service: web::Data<PurlService>,
+    ingestor: web::Data<IngestorService>,
     db: web::Data<Database>,
     request: web::Json<PurlsRequest>,
     web::Query(Deprecation { deprecated }): web::Query<Deprecation>,
     _: Require<ReadSbom>,
 ) -> actix_web::Result<impl Responder> {
     let items: Vec<&str> = request.items.iter().map(|s| s.as_str()).collect();
+
     match service
-        .fetch_purl_details(&items, deprecated, db.as_ref())
+        .fetch_purl_details(&items, deprecated, db.as_ref(), Some(ingestor.as_ref()))
         .await
     {
         Ok(details) => Ok(HttpResponse::Ok().json(details)),

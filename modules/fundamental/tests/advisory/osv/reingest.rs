@@ -103,6 +103,7 @@ async fn withdrawn(ctx: &TrustifyContext) -> anyhow::Result<()> {
             &[purl.head.uuid.to_string()],
             Deprecation::Consider,
             &ctx.db,
+            None,
         )
         .await
         .expect("must find something");

@@ -27,7 +27,7 @@ use trustify_entity::{
     qualified_purl::{self, CanonicalPurl},
     versioned_purl,
 };
-use trustify_module_ingestor::common::Deprecation;
+use trustify_module_ingestor::{common::Deprecation, service::IngestorService};
 
 #[derive(Default)]
 pub struct PurlService {}
@@ -237,6 +237,7 @@ impl PurlService {
         identifiers: &[I],
         deprecated: Deprecation,
         connection: &C,
+        ingestor: Option<&IngestorService>,
     ) -> Result<HashMap<String, PurlDetails>, Error> {
         let (purls, uuids): (Vec<_>, Vec<_>) = identifiers
             .iter()
@@ -253,7 +254,7 @@ impl PurlService {
             .collect::<Result<_, _>>()?;
 
         let details = self
-            .purls_by_purl(&purls, deprecated, connection)
+            .purls_by_purl(&purls, deprecated, connection, ingestor)
             .await?
             .into_iter()
             .map(|detail| (detail.head.purl.to_string(), detail))
@@ -268,15 +269,57 @@ impl PurlService {
         Ok(details)
     }
 
+    async fn ingest_missing_purls<C: ConnectionTrait>(
+        &self,
+        purls: &[Purl],
+        connection: &C,
+        ingestor: &IngestorService,
+    ) {
+        let ingestion_futures: Vec<_> = purls
+            .iter()
+            .map(|purl| {
+                // Clone the package URL if needed (depending on its type).
+                let purl = purl.clone();
+                async move {
+                    match ingestor
+                        .graph()
+                        .get_qualified_package(&purl, connection)
+                        .await
+                    {
+                        Ok(Some(_)) => (), // Package exists, do nothing.
+                        Ok(None) => {
+                            if let Err(e) = ingestor
+                                .graph()
+                                .ingest_qualified_package(&purl, connection)
+                                .await
+                            {
+                                log::error!("Failed to ingest package {}: {:?}", purl, e);
+                            }
+                        }
+                        Err(e) => log::error!("Failed to check package {}: {:?}", purl, e),
+                    }
+                }
+            })
+            .collect();
+
+        futures_util::future::join_all(ingestion_futures).await;
+    }
+
     async fn purls_by_purl<C: ConnectionTrait>(
         &self,
         purls: &[Purl],
         deprecation: Deprecation,
         connection: &C,
+        ingestor: Option<&IngestorService>,
     ) -> Result<Vec<PurlDetails>, Error> {
         if purls.is_empty() {
             return Ok(Default::default());
         }
+        if let Some(ingestor_svc) = ingestor {
+            self.ingest_missing_purls(purls, connection, ingestor_svc)
+                .await;
+        }
+
         let canonical: Vec<CanonicalPurl> = purls
             .iter()
             .map(|purl| CanonicalPurl::from(purl.clone()))

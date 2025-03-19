@@ -50,7 +50,7 @@ use uuid::Uuid;
 
 type NodeGraph = Graph<graph::Node, Relationship, petgraph::Directed>;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AnalysisService {
     graph_cache: Arc<GraphMap>,
 }

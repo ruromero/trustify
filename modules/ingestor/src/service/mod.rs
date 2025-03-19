@@ -139,7 +139,7 @@ impl ResponseError for Error {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct IngestorService {
     graph: Graph,
     storage: DispatchBackend,
