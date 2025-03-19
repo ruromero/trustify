@@ -8,8 +8,8 @@ use crate::{
     },
 };
 use sea_orm::{
-    ColumnTrait, ColumnType, ConnectionTrait, EntityTrait, FromQueryResult, IntoIdentity,
-    QueryFilter, QueryOrder, QuerySelect, prelude::Uuid,
+    ColumnTrait, ColumnType, ConnectionTrait, EntityTrait, FromQueryResult, IntoIdentity, JoinType,
+    QueryFilter, QueryOrder, QuerySelect, QueryTrait, RelationTrait, prelude::Uuid,
 };
 use sea_query::{Expr, Func, Order, SimpleExpr};
 use std::{collections::HashMap, fmt::Debug, str::FromStr};
@@ -23,9 +23,7 @@ use trustify_common::{
     purl::{Purl, PurlErr},
 };
 use trustify_entity::{
-    base_purl,
-    qualified_purl::{self, CanonicalPurl},
-    versioned_purl,
+    advisory, advisory_vulnerability, base_purl, cvss3, purl_status, qualified_purl::{self, CanonicalPurl}, versioned_purl
 };
 use trustify_module_ingestor::{common::Deprecation, service::IngestorService};
 
@@ -326,7 +324,32 @@ impl PurlService {
             .collect();
 
         let items = qualified_purl::Entity::find()
+            .column(qualified_purl::Column::Id)
+            .column(qualified_purl::Column::Purl)
+            .column(advisory_vulnerability::Column::Title)
+            .column(advisory_vulnerability::Column::Description)
+            .column(cvss3::Column::Severity)
+            .column(cvss3::Column::Score)
+            // purls -> fixed
+            //
             .filter(qualified_purl::Column::Purl.is_in(canonical))
+            .join(
+                JoinType::InnerJoin,
+                qualified_purl::Relation::VersionedPurl.def(),
+            )
+            .join(
+                JoinType::InnerJoin,
+                versioned_purl::Relation::PurlStatus.def(),
+            )
+            // Join with Advisory Vulnerability to get vulnerability details
+            .join(
+                JoinType::InnerJoin,
+                purl_status::Relation::AdvisoryVulnerability.def(),
+            )
+            .join(
+                JoinType::LeftJoin,
+                advisory_vulnerability::Relation::Cvss3.def(),
+            )
             .all(connection)
             .await?;
 
