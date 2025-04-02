@@ -1,0 +1,18 @@
+services:
+  keycloak:
+    image: docker.io/keycloak/keycloak:26.1
+    environment:
+      KC_DB: dev-file
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin123456
+      KC_HEALTH_ENABLED: true
+    ports:
+      - "8090:8080"
+    command: ["start-dev", "--import-realm"]
+    volumes:
+       - ./config/init-sso/data/trustify-realm.json:/opt/keycloak/data/import/trustify-realm.json:z
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 20

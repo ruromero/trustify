@@ -1,0 +1,251 @@
+{
+  "id": "trustify",
+  "realm": "trustify",
+  "displayName": "Trustify",
+  "enabled": true,
+  "registrationAllowed": true,
+  "resetPasswordAllowed": true,
+  "loginWithEmailAllowed": false,
+  "roles": {
+    "realm": [
+      {
+        "name": "chicken-user",
+        "description": "User role"
+      },
+      {
+        "name": "chicken-admin",
+        "description": "Admin role"
+      },
+      {
+        "name": "chicken-manager",
+        "description": "Manager role"
+      }
+    ]
+  },
+  "defaultRoles": [
+    "chicken-user"
+  ],
+  "clientScopes": [
+    {
+      "name": "read:document",
+      "protocol": "openid-connect"
+    },
+    {
+      "name": "create:document",
+      "protocol": "openid-connect"
+    },
+    {
+      "name": "delete:document",
+      "protocol": "openid-connect"
+    }
+  ],
+  "scopeMappings": [
+    {
+      "clientScope": "create:document",
+      "roles": [
+        "chicken-manager"
+      ]
+    },
+    {
+      "clientScope": "delete:document",
+      "roles": [
+        "chicken-manager"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "user",
+      "createdTimestamp": 1743504999179,
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "user123456"
+        }
+      ],
+      "realmRoles": [
+        "chicken-user"
+      ]
+    },
+    {
+      "username": "admin",
+      "createdTimestamp": 1743504999179,
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123456"
+        }
+      ],
+      "realmRoles": [
+        "chicken-admin",
+        "chicken-manager"
+      ]
+    },
+    {
+      "username": "service-account-testing-manager",
+      "createdTimestamp": 1743504999179,
+      "enabled": true,
+      "totp": false,
+      "serviceAccountClientId": "testing-manager",
+      "realmRoles": [
+        "chicken-manager",
+        "default-roles-trustify"
+      ]
+    },
+    {
+      "username": "service-account-testing-user",
+      "createdTimestamp": 1743504999179,
+      "enabled": true,
+      "totp": false,
+      "serviceAccountClientId": "testing-user",
+      "realmRoles": [
+        "default-roles-trustify"
+      ]
+    },
+    {
+      "username": "service-account-walker",
+      "createdTimestamp": 1743504999179,
+      "enabled": true,
+      "totp": false,
+      "serviceAccountClientId": "walker",
+      "realmRoles": [
+        "default-roles-trustify",
+        "chicken-manager"
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "frontend",
+      "clientAuthenticatorType": "client-secret",
+      "enabled": true,
+      "publicClient": true,
+      "implicitFlowEnabled": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": true,
+      "redirectUris": [
+        "http://localhost:8080/*"
+      ],
+      "webOrigins": [
+        "*"
+      ],
+      "defaultClientScopes": [
+        "email",
+        "profile",
+        "roles",
+        "web-origins",
+        "read:document",
+        "create:document",
+        "delete:document",
+        "basic"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "microprofile-jwt",
+        "offline_access",
+        "phone"
+      ],
+      "attributes": {
+        "access.token.lifespan": "300",
+        "post.logout.redirect.uris": "+"
+      }
+    },
+    {
+      "clientId": "walker",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "example-secret",
+      "publicClient": false,
+      "implicitFlowEnabled": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "fullScopeAllowed": true,
+      "defaultClientScopes": [
+        "email",
+        "profile",
+        "roles",
+        "web-origins",
+        "create:document",
+        "read:document",
+        "basic"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "microprofile-jwt",
+        "offline_access",
+        "phone"
+      ],
+      "attributes": {
+        "access.token.lifespan": "300",
+        "post.logout.redirect.uris": "+"
+      }
+    },
+    {
+      "clientId": "testing-manager",
+      "clientAuthenticatorType": "client-secret",
+      "secret": "example-secret",
+      "enabled": true,
+      "publicClient": false,
+      "implicitFlowEnabled": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "fullScopeAllowed": true,
+      "defaultClientScopes": [
+        "email",
+        "profile",
+        "roles",
+        "web-origins",
+        "read:document",
+        "create:document",
+        "delete:document",
+        "basic"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "microprofile-jwt",
+        "offline_access",
+        "phone"
+      ],
+      "attributes": {
+        "access.token.lifespan": "300",
+        "post.logout.redirect.uris": "+"
+      }
+    },
+    {
+      "clientId": "testing-user",
+      "clientAuthenticatorType": "client-secret",
+      "secret": "example-secret",
+      "enabled": true,
+      "publicClient": false,
+      "implicitFlowEnabled": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "fullScopeAllowed": true,
+      "defaultClientScopes": [
+        "email",
+        "profile",
+        "roles",
+        "web-origins",
+        "read:document",
+        "basic"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "microprofile-jwt",
+        "offline_access",
+        "phone"
+      ],
+      "attributes": {
+        "access.token.lifespan": "300",
+        "post.logout.redirect.uris": "+"
+      }
+    }
+  ]
+}
