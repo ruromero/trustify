@@ -55,6 +55,9 @@ else
   kcadm create realms -s "realm=${REALM}" "${REALM_OPTS[@]}"
 fi
 
+echo "DEBUG: GITHUB_CLIENT_ID='$GITHUB_CLIENT_ID'"
+echo "DEBUG: GITHUB_CLIENT_SECRET is $(if [[ -n "$GITHUB_CLIENT_SECRET" ]]; then echo "set"; else echo "not set"; fi)"
+
 if [[ -n "$GITHUB_CLIENT_ID" ]]; then
   echo "Configuring GitHub identity provider..."
   ID=$(kcadm get identity-provider/instances/github -r "${REALM}" --fields alias --format csv --noquotes 2>/dev/null || echo "")
@@ -120,6 +123,24 @@ kcadm add-roles -r "${REALM}" --uusername service-account-walker --rolename chic
 # now set the client-secret
 ID=$(kcadm get clients -r "${REALM}" --query exact=true --query "clientId=walker" --fields id --format csv --noquotes)
 kcadm update "clients/${ID}" -r "${REALM}" -s "secret=${WALKER_SECRET}"
+
+# create n8n service account
+ID=$(kcadm get clients -r "${REALM}" --query exact=true --query "clientId=n8n" --fields id --format csv --noquotes)
+CLIENT_OPTS=()
+# Set default n8n redirect URIs if not provided
+N8N_REDIRECT_URIS="${N8N_REDIRECT_URIS:-[\"http://localhost:5678/*\",\"http://localhost:5678/rest/oauth2-credential/callback\"]}"
+CLIENT_OPTS+=(-s "redirectUris=${N8N_REDIRECT_URIS}")
+if [[ -n "$ID" ]]; then
+  # TODO: replace with update once https://github.com/keycloak/keycloak/issues/12484 is fixed
+  # kcadm update "clients/${ID}" -r "${REALM}" -f /etc/init-data/client.json "${CLIENT_OPTS[@]}"
+  kcadm delete "clients/${ID}" -r "${REALM}"
+  kcadm create clients -r "${REALM}" -f "${INIT_DATA}/client-n8n.json" "${CLIENT_OPTS[@]}"
+else
+  kcadm create clients -r "${REALM}" -f "${INIT_DATA}/client-n8n.json" "${CLIENT_OPTS[@]}"
+fi
+# now set the client-secret for n8n
+ID=$(kcadm get clients -r "${REALM}" --query exact=true --query "clientId=n8n" --fields id --format csv --noquotes)
+kcadm update "clients/${ID}" -r "${REALM}" -s "secret=${N8N_SECRET}"
 
 # create user
 ID=$(kcadm get users -r "${REALM}" --query exact=true --query "username=${CHICKEN_ADMIN}" --fields id --format csv --noquotes)

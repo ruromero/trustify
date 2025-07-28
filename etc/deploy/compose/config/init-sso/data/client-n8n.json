@@ -1,0 +1,66 @@
+{
+  "clientId": "n8n",
+  "clientAuthenticatorType": "client-secret",
+  "enabled": true,
+  "publicClient": false,
+  "implicitFlowEnabled": false,
+  "standardFlowEnabled": true,
+  "directAccessGrantsEnabled": false,
+  "serviceAccountsEnabled": false,
+  "redirectUris": [
+    "http://localhost:5678/*",
+    "http://localhost:5678/rest/oauth2-credential/callback"
+  ],
+  "webOrigins": [
+    "http://localhost:5678"
+  ],
+  "fullScopeAllowed": true,
+  "defaultClientScopes": [
+    "email",
+    "profile",
+    "roles",
+    "web-origins",
+    "create:document",
+    "read:document",
+    "delete:document"
+  ],
+  "optionalClientScopes": [
+    "address",
+    "microprofile-jwt",
+    "offline_access",
+    "phone"
+  ],
+  "attributes": {
+    "access.token.lifespan": "1800",
+    "post.logout.redirect.uris": "+",
+    "use.refresh.tokens": "true",
+    "client_session_idle_timeout": "1800",
+    "client_session_max_lifespan": "7200"
+  },
+  "protocolMappers": [
+    {
+      "name": "sub",
+      "protocol": "openid-connect",
+      "protocolMapper": "oidc-sub-mapper",
+      "consentRequired": false,
+      "config": {
+        "access.token.claim": "true",
+        "claim.name": "sub",
+        "jsonType.label": "String"
+      }
+    },
+    {
+      "name": "username",
+      "protocol": "openid-connect", 
+      "protocolMapper": "oidc-usermodel-property-mapper",
+      "consentRequired": false,
+      "config": {
+        "userinfo.token.claim": "true",
+        "user.attribute": "username",
+        "access.token.claim": "true",
+        "claim.name": "preferred_username",
+        "jsonType.label": "String"
+      }
+    }
+  ]
+} 

@@ -44,6 +44,10 @@ services:
       # GitHub OAuth provider configuration
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      # N8N client configuration
+      - N8N_SECRET=n8n-secret-key-for-trustify-auth
+      # Optional: Override n8n redirect URIs (defaults to localhost:5678)
+      # - N8N_REDIRECT_URIS=["http://your-n8n-host:5678/*","http://your-n8n-host:5678/rest/oauth2-credential/callback"]
     volumes:
       - ./config/init-sso:/init-sso${SELINUX_VOLUME_OPTIONS}
     entrypoint: /usr/bin/bash

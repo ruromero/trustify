@@ -8,7 +8,7 @@ pub const FRONTEND_CLIENT_ID: &str = "frontend";
 pub const SERVICE_CLIENT_ID: &str = "testing-manager";
 
 pub const PUBLIC_CLIENT_IDS: &[&str] = &[FRONTEND_CLIENT_ID];
-pub const CONFIDENTIAL_CLIENT_IDS: &[&str] = &["walker", "testing-user", SERVICE_CLIENT_ID];
+pub const CONFIDENTIAL_CLIENT_IDS: &[&str] = &["walker", "testing-user", SERVICE_CLIENT_ID, "n8n"];
 
 /// The clients which will be accepted by services when running with `--devmode`.
 ///
@@ -19,6 +19,7 @@ pub const CLIENT_IDS: &[&str] = &[
     "walker",
     "testing-user",
     SERVICE_CLIENT_ID,
+    "n8n",
 ];
 
 pub const SWAGGER_UI_CLIENT_ID: &str = FRONTEND_CLIENT_ID;
