@@ -47,6 +47,7 @@ impl AuthenticatorConfig {
                     group_mappings: Default::default(),
                     tls_insecure: false,
                     tls_ca_certificates: Default::default(),
+                    requested_scopes: None,
                 })
                 .collect(),
         }
@@ -143,6 +144,10 @@ pub struct AuthenticatorClientConfig {
     /// Add additional certificates as trust anchor for contacting the issuer
     #[serde(default)]
     pub tls_ca_certificates: Vec<PathBuf>,
+
+    /// Custom scopes to request when obtaining tokens (space-separated)
+    #[serde(default)]
+    pub requested_scopes: Option<String>,
 }
 
 impl SingleAuthenticatorClientConfig {
@@ -159,6 +164,7 @@ impl SingleAuthenticatorClientConfig {
                 group_selector: None,
                 group_mappings: Default::default(),
                 additional_permissions: Default::default(),
+                requested_scopes: None,
             })
     }
 }

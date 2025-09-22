@@ -50,6 +50,13 @@ pub struct OpenIdTokenProviderConfigArguments {
         default_value = "false"
     )]
     pub tls_insecure: bool,
+    /// Custom scopes to request when obtaining tokens (space-separated)
+    #[arg(
+        id = "oidc_scopes",
+        long = "oidc-scopes",
+        env = "OIDC_PROVIDER_SCOPES"
+    )]
+    pub scopes: Option<String>,
 }
 
 impl OpenIdTokenProviderConfigArguments {
@@ -60,6 +67,7 @@ impl OpenIdTokenProviderConfigArguments {
             client_secret: Some(devmode::SSO_CLIENT_SECRET.to_string()),
             refresh_before: Duration::from_secs(30).into(),
             tls_insecure: false,
+            scopes: None,
         }
     }
 }
@@ -89,9 +97,38 @@ pub struct OpenIdTokenProviderConfig {
     pub issuer_url: String,
     pub refresh_before: humantime::Duration,
     pub tls_insecure: bool,
+    /// Custom scopes to request when obtaining tokens (space-separated)
+    #[arg(long = "oidc-scopes", env = "OIDC_PROVIDER_SCOPES")]
+    pub scopes: Option<String>,
 }
 
 impl OpenIdTokenProviderConfig {
+    /// Parse and validate scopes string
+    fn parse_scopes(scopes: Option<String>) -> Option<String> {
+        scopes
+            .filter(|s| !s.trim().is_empty())
+            .map(|s| s.trim().to_string())
+    }
+
+    /// Get scopes as a reference for token requests
+    pub fn scopes(&self) -> Option<&str> {
+        self.scopes.as_deref().filter(|s| !s.is_empty())
+    }
+
+    /// Validate that scopes are properly formatted
+    pub fn validate_scopes(&self) -> Result<(), String> {
+        if let Some(scopes) = &self.scopes {
+            if scopes.trim().is_empty() {
+                return Err("Scopes cannot be empty".to_string());
+            }
+            // Basic validation: check for invalid characters
+            if scopes.chars().any(|c| c.is_control() && c != ' ') {
+                return Err("Scopes contain invalid characters".to_string());
+            }
+        }
+        Ok(())
+    }
+
     pub fn devmode() -> Self {
         Self {
             issuer_url: devmode::issuer_url(),
@@ -99,6 +136,7 @@ impl OpenIdTokenProviderConfig {
             client_secret: devmode::SSO_CLIENT_SECRET.to_string(),
             refresh_before: Duration::from_secs(30).into(),
             tls_insecure: false,
+            scopes: None,
         }
     }
 
@@ -132,6 +170,7 @@ impl OpenIdTokenProviderConfig {
                     issuer_url,
                     refresh_before: arguments.refresh_before,
                     tls_insecure: arguments.tls_insecure,
+                    scopes: Self::parse_scopes(arguments.scopes),
                 })
             }
             _ => None,
@@ -151,6 +190,7 @@ pub struct OpenIdTokenProvider {
     client: Arc<openid::Client>,
     current_token: Arc<RwLock<Option<openid::TemporalBearerGuard>>>,
     refresh_before: chrono::Duration,
+    scopes: Option<Box<str>>,
 }
 
 impl Debug for OpenIdTokenProvider {
@@ -167,15 +207,19 @@ impl Debug for OpenIdTokenProvider {
 
 impl OpenIdTokenProvider {
     /// Create a new provider using the provided client.
-    pub fn new(client: openid::Client, refresh_before: chrono::Duration) -> Self {
+    pub fn new(client: openid::Client, refresh_before: chrono::Duration, scopes: Option<String>) -> Self {
         Self {
             client: Arc::new(client),
             current_token: Arc::new(RwLock::new(None)),
             refresh_before,
+            scopes: scopes.map(|s| s.into_boxed_str()),
         }
     }
 
     pub async fn with_config(config: OpenIdTokenProviderConfig) -> anyhow::Result<Self> {
+        // Validate scopes before proceeding
+        config.validate_scopes().map_err(|e| anyhow::anyhow!("Invalid scopes: {}", e))?;
+
         let issuer = Url::parse(&config.issuer_url).context("Parse issuer URL")?;
         let mut client = reqwest::ClientBuilder::new();
 
@@ -198,6 +242,7 @@ impl OpenIdTokenProvider {
         Ok(Self::new(
             client,
             chrono::Duration::from_std(config.refresh_before.into())?,
+            config.scopes,
         ))
     }
 
@@ -260,9 +305,16 @@ impl OpenIdTokenProvider {
     }
 
     async fn initial_token(&self) -> Result<openid::TemporalBearerGuard, openid::error::Error> {
+        let scopes = self.scopes.as_deref();
+        if let Some(scopes) = scopes {
+            log::debug!("Requesting token with scopes: {}", scopes);
+        } else {
+            log::debug!("Requesting token without specific scopes");
+        }
+
         Ok(self
             .client
-            .request_token_using_client_credentials(None)
+            .request_token_using_client_credentials(scopes)
             .await?
             .into())
     }
