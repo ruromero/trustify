@@ -40,7 +40,7 @@ actix-web-extras = "0.1"
 actix-web-httpauth = "0.8"
 actix-web-static-files = "4.0.1"
 anyhow = "1.0.72"
-async-compression = "=0.4.31" # FIXME: unpin when https://github.com/Nullus157/async-compression/issues/420 is sorted
+async-compression = "0.4.31"
 async-graphql = "7.0.5"
 async-graphql-actix-web = "7.0.5"
 async-trait = "0.1.74"
@@ -183,10 +183,6 @@ trustify-ui = { git = "https://github.com/guacsec/trustify-ui.git", branch = "pu
 postgresql_archive = { version = "0.20.0", default-features = false, features = ["theseus", "rustls"] }
 postgresql_embedded = { version = "0.20.0", default-features = false, features = ["theseus", "rustls"] }
 postgresql_commands = { version = "0.20.0", default-features = false, features = ["tokio"] }
-
-# FIXME: drop when https://github.com/Nullus157/async-compression/issues/420 is sorted
-compression-core = "=0.4.29"
-compression-codecs = "=0.4.30"
 
 [patch.crates-io]
 #csaf-walker = { git = "https://github.com/ctron/csaf-walker", rev = "7b6e64dd56e4be79e184b053ef754a42e1496fe0" }
