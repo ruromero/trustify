@@ -1,14 +1,12 @@
 # Trustify CLI
 
-A command-line interface for interacting with the [Trustify](https://github.com/trustification/trustify) Software Supply-Chain Security API.
+A command-line interface for interacting with the [Trustify](https://github.com/guacsec/trustify) API.
 
 ## Features
 
 - 🔐 OAuth2 authentication (client credentials)
 - 📦 SBOM management (list, get, delete)
 - 🔍 Duplicate detection and cleanup
-- ⚡ Concurrent operations for fast bulk processing
-- 🌍 Environment variable and `.env` file support
 
 ## Installation
 
