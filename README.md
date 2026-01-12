@@ -25,6 +25,41 @@ cargo build --release
 # The binary will be at ./target/release/trustify
 ```
 
+### Using Docker
+
+Pull and run the pre-built image:
+
+```bash
+# Run with environment variables
+docker run --rm \
+  -e TRUSTIFY_URL=https://trustify.example.com \
+  -e TRUSTIFY_SSO_URL=https://sso.example.com/realms/trustify \
+  -e TRUSTIFY_CLIENT_ID=my-client \
+  -e TRUSTIFY_CLIENT_SECRET=my-secret \
+  ghcr.io/ruromero/trustify-cli sbom list
+
+# Or use an env file
+docker run --rm --env-file .env ghcr.io/ruromero/trustify-cli sbom list
+
+# Mount a volume to save/load files (e.g., duplicates.json)
+docker run --rm --env-file .env \
+  -v $(pwd):/data \
+  ghcr.io/ruromero/trustify-cli sbom duplicates find --output /data/duplicates.json
+```
+
+### Build Docker Image Locally
+
+```bash
+# Clone and build
+git clone https://github.com/ruromero/trustify-cli.git
+cd trustify-cli
+
+docker build -t trustify-cli .
+
+# Run
+docker run --rm --env-file .env trustify-cli sbom list
+```
+
 ## Configuration
 
 The CLI can be configured using command-line arguments, environment variables, or a `.env` file.
