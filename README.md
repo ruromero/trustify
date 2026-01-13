@@ -4,9 +4,10 @@ A command-line interface for interacting with the [Trustify](https://github.com/
 
 ## Features
 
-- 🔐 OAuth2 authentication (client credentials)
+- 🔐 OAuth2 authentication (client credentials) with token retrieval
 - 📦 SBOM management (list, get, delete)
 - 🔍 Duplicate detection and cleanup
+- ⚡ Concurrent operations with automatic retry and token refresh
 
 ## Installation
 
@@ -131,6 +132,30 @@ trustify -u http://localhost:8080 \
     --client-secret <CLIENT_SECRET>  OAuth2 Client Secret
 -h, --help                           Print help
 -V, --version                        Print version
+```
+
+---
+
+### `auth token`
+
+Retrieve an OAuth2 access token using the configured credentials. Useful for debugging authentication or using the token with other tools.
+
+```bash
+trustify -u http://localhost:8080 \
+  --sso-url http://sso.example.com/realms/trustify \
+  --client-id my-client \
+  --client-secret my-secret \
+  auth token
+```
+
+**Output:** The access token string (can be used as a Bearer token)
+
+**Example with curl:**
+
+```bash
+# Get token and use with curl
+TOKEN=$(trustify auth token)
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v2/sbom
 ```
 
 ---
