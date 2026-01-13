@@ -1,13 +1,50 @@
 # Trustify CLI
 
-A command-line interface for interacting with the [Trustify](https://github.com/guacsec/trustify) API.
+A command-line tool for interacting with the [Trustify API](https://github.com/guacsec/trustify). Built for DevSecOps teams who need to keep their software supply chain clean and organized.
+
+## Quick Start
+
+```bash
+# Set up your credentials once
+cat > .env << EOF
+TRUSTIFY_URL=https://trustify.example.com
+TRUSTIFY_SSO_URL=https://sso.example.com/realms/trustify
+TRUSTIFY_CLIENT_ID=my-client
+TRUSTIFY_CLIENT_SECRET=my-secret
+EOF
+
+# Find all duplicate SBOMs (same document_id, different versions)
+trustify sbom duplicates find
+
+# Preview what would be deleted
+trustify sbom duplicates delete --dry-run
+
+# Clean them up!
+trustify sbom duplicates delete
+```
+
+**Result:** Thousands of duplicate SBOMs cleaned up in seconds with concurrent API requests and automatic retry handling.
 
 ## Features
 
-- 🔐 OAuth2 authentication (client credentials) with token retrieval
-- 📦 SBOM management (list, get, delete)
-- 🔍 Duplicate detection and cleanup
-- ⚡ Concurrent operations with automatic retry and token refresh
+- 🔍 **Duplicate detection** — Find and remove duplicate SBOMs by document ID
+- 🔐 **Seamless auth** — OAuth2 with automatic token refresh
+- 🔄 **Resilient** — Auto-retry on timeouts and transient failures
+- 📦 **SBOM management** — List, get, and delete with flexible output formats
+
+## Index
+
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Commands](#commands)
+  - [`auth token`](#auth-token)
+  - [`sbom list`](#sbom-list)
+  - [`sbom get`](#sbom-get-id)
+  - [`sbom delete`](#sbom-delete)
+  - [`sbom duplicates find`](#sbom-duplicates-find)
+  - [`sbom duplicates delete`](#sbom-duplicates-delete)
+- [API Reference](#api-reference)
+- [License](#license)
 
 ## Installation
 
@@ -26,100 +63,29 @@ cargo build --release
 
 ### Using Docker
 
-Pull and run the pre-built image:
-
 ```bash
-# Run with environment variables
-docker run --rm \
-  -e TRUSTIFY_URL=https://trustify.example.com \
-  -e TRUSTIFY_SSO_URL=https://sso.example.com/realms/trustify \
-  -e TRUSTIFY_CLIENT_ID=my-client \
-  -e TRUSTIFY_CLIENT_SECRET=my-secret \
-  ghcr.io/ruromero/trustify-cli sbom list
-
-# Or use an env file
+# Use your .env file with the container
 docker run --rm --env-file .env ghcr.io/ruromero/trustify-cli sbom list
 
-# Mount a volume to save/load files (e.g., duplicates.json)
-docker run --rm --env-file .env \
-  -v $(pwd):/data \
+# For commands that write files, mount a volume
+docker run --rm --env-file .env -v $(pwd):/data \
   ghcr.io/ruromero/trustify-cli sbom duplicates find --output /data/duplicates.json
-```
-
-### Build Docker Image Locally
-
-```bash
-# Clone and build
-git clone https://github.com/ruromero/trustify-cli.git
-cd trustify-cli
-
-docker build -t trustify-cli .
-
-# Run
-docker run --rm --env-file .env trustify-cli sbom list
 ```
 
 ## Configuration
 
-The CLI can be configured using command-line arguments, environment variables, or a `.env` file.
-
-### Configuration Options
-
-| CLI Argument | Environment Variable | Required | Description |
-|--------------|---------------------|----------|-------------|
-| `-u, --url` | `TRUSTIFY_URL` | ✅ Yes | Trustify API URL |
-| `--sso-url` | `TRUSTIFY_SSO_URL` | No | SSO/Keycloak URL for authentication |
-| `--client-id` | `TRUSTIFY_CLIENT_ID` | No | OAuth2 Client ID |
-| `--client-secret` | `TRUSTIFY_CLIENT_SECRET` | No | OAuth2 Client Secret |
-
-### Using Environment Variables
-
-```bash
-export TRUSTIFY_URL=http://localhost:8080
-export TRUSTIFY_SSO_URL=http://sso.example.com/realms/trustify
-export TRUSTIFY_CLIENT_ID=my-client
-export TRUSTIFY_CLIENT_SECRET=my-secret
-
-trustify sbom list
-```
-
-### Using a `.env` File
-
 Create a `.env` file in your working directory:
 
 ```env
-TRUSTIFY_URL=http://localhost:8080
-TRUSTIFY_SSO_URL=http://sso.example.com/realms/trustify
+TRUSTIFY_URL=https://trustify.example.com
+TRUSTIFY_SSO_URL=https://sso.example.com/realms/trustify
 TRUSTIFY_CLIENT_ID=my-client
 TRUSTIFY_CLIENT_SECRET=my-secret
 ```
 
-Then simply run:
+That's it! The CLI automatically loads credentials and handles OAuth2 token management.
 
-```bash
-trustify sbom list
-```
-
-### Configuration Priority
-
-1. **CLI arguments** (highest priority)
-2. **Shell environment variables**
-3. **`.env` file** (lowest priority)
-
-## Authentication
-
-When `--sso-url`, `--client-id`, and `--client-secret` are all provided, the CLI automatically obtains an OAuth2 token using the client credentials grant before making API requests.
-
-The SSO URL should point to your Keycloak realm. The CLI automatically appends `/protocol/openid-connect/token` if needed.
-
-```bash
-# Full authentication example
-trustify -u http://localhost:8080 \
-  --sso-url http://sso.example.com/realms/trustify \
-  --client-id my-client \
-  --client-secret my-secret \
-  sbom list
-```
+> **Tip:** You can also use CLI arguments (`-u`, `--sso-url`, etc.) or shell environment variables. CLI args take priority over env vars, which take priority over `.env` files.
 
 ## Commands
 
@@ -138,221 +104,85 @@ trustify -u http://localhost:8080 \
 
 ### `auth token`
 
-Retrieve an OAuth2 access token using the configured credentials. Useful for debugging authentication or using the token with other tools.
+Get an OAuth2 access token for use with other tools.
 
 ```bash
-trustify -u http://localhost:8080 \
-  --sso-url http://sso.example.com/realms/trustify \
-  --client-id my-client \
-  --client-secret my-secret \
-  auth token
-```
-
-**Output:** The access token string (can be used as a Bearer token)
-
-**Example with curl:**
-
-```bash
-# Get token and use with curl
 TOKEN=$(trustify auth token)
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v2/sbom
+curl -H "Authorization: Bearer $TOKEN" $TRUSTIFY_URL/api/v2/sbom
 ```
 
 ---
 
 ### `sbom get <ID>`
 
-Get an SBOM by its ID. Returns the full JSON document.
+Get an SBOM by ID (returns raw JSON).
 
 ```bash
-trustify -u http://localhost:8080 sbom get abc123
+trustify sbom get urn:uuid:abc123
 ```
-
-**Output:** Raw JSON of the SBOM
 
 ---
 
 ### `sbom list`
 
-List SBOMs with optional filtering, pagination, and output formatting.
+List SBOMs with filtering, pagination, and output formatting.
 
 ```bash
-trustify -u http://localhost:8080 sbom list [OPTIONS]
+trustify sbom list                              # Full JSON
+trustify sbom list --format id                  # Just IDs
+trustify sbom list --query "name=my-app"        # Filter by name
+trustify sbom list --limit 10 --offset 20       # Pagination
+trustify sbom list --sort "published:desc"      # Sort by date
 ```
 
-**Options:**
-
-| Option | Description |
-|--------|-------------|
-| `--query <QUERY>` | Query filter (e.g., `name=my-app`) |
-| `--limit <LIMIT>` | Maximum number of results |
-| `--offset <OFFSET>` | Skip first N results |
-| `--sort <SORT>` | Sort order (e.g., `name:asc`, `published:desc`) |
-| `--format <FORMAT>` | Output format: `id`, `name`, `short`, `full` (default: `full`) |
-
-**Format Options:**
-
-| Format | Fields Included |
-|--------|-----------------|
-| `id` | Just the ID (one per line) |
-| `name` | `id`, `name`, `document_id` |
-| `short` | `id`, `name`, `document_id`, `ingested`, `published`, `size` |
-| `full` | Complete JSON document |
-
-**Examples:**
-
-```bash
-# List all SBOMs (full JSON)
-trustify -u http://localhost:8080 sbom list
-
-# List with query filter
-trustify -u http://localhost:8080 sbom list --query "name=my-app"
-
-# List only IDs
-trustify -u http://localhost:8080 sbom list --format id
-
-# Paginated results
-trustify -u http://localhost:8080 sbom list --limit 10 --offset 20
-
-# Sorted results
-trustify -u http://localhost:8080 sbom list --sort "published:desc"
-```
+**Format options:** `id` | `name` | `short` | `full` (default)
 
 ---
 
 ### `sbom delete`
 
-Delete an SBOM (placeholder - not fully implemented).
+Delete an SBOM by ID.
 
 ```bash
-trustify -u http://localhost:8080 sbom delete --id <ID> [--dry-run]
+trustify sbom delete --id urn:uuid:abc123
+trustify sbom delete --id urn:uuid:abc123 --dry-run  # Preview only
 ```
 
 ---
 
 ### `sbom duplicates find`
 
-Find duplicate SBOMs by `document_id`. Groups SBOMs with the same `document_id` and identifies the most recent (by `published` date) as the primary, with others marked as duplicates.
+Scan all SBOMs and find duplicates by `document_id`. Keeps the most recent version, marks others as duplicates.
 
 ```bash
-trustify -u http://localhost:8080 sbom duplicates find [OPTIONS]
+trustify sbom duplicates find                   # Default: 4 workers, saves to duplicates.json
+trustify sbom duplicates find -j 8              # Faster with 8 concurrent workers
+trustify sbom duplicates find -b 500 -j 8       # Larger batches + more workers
+trustify sbom duplicates find --output out.json # Custom output file
 ```
 
-**Options:**
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `-b, --batch-size` | 100 | Number of SBOMs to fetch per request |
-| `-j, --concurrency` | 4 | Number of concurrent fetch requests |
-| `--output` | `duplicates.json` | Output file path |
-
-**Examples:**
-
-```bash
-# Default settings
-trustify -u http://localhost:8080 sbom duplicates find
-
-# Faster with more concurrency
-trustify -u http://localhost:8080 sbom duplicates find -j 8
-
-# Larger batches
-trustify -u http://localhost:8080 sbom duplicates find -b 500 -j 8
-
-# Custom output file
-trustify -u http://localhost:8080 sbom duplicates find --output my-duplicates.json
-```
-
-**Output Format (`duplicates.json`):**
+**Output file format:**
 
 ```json
 [
   {
     "document_id": "urn:example:sbom-1.0",
+    "id": "abc123",                    // ← Keep this one (most recent)
     "published": "2025-01-10T12:00:00Z",
-    "id": "abc123",
-    "duplicates": ["def456", "ghi789"]
+    "duplicates": ["def456", "ghi789"] // ← Delete these
   }
 ]
 ```
-
-Where:
-- `id` = The most recent SBOM (keep this one)
-- `duplicates` = Older versions that can be deleted
 
 ---
 
 ### `sbom duplicates delete`
 
-Delete duplicate SBOMs identified by the `duplicates find` command.
+Delete the duplicates found by `find`. Always preview with `--dry-run` first!
 
 ```bash
-trustify -u http://localhost:8080 sbom duplicates delete [OPTIONS]
+trustify sbom duplicates delete --dry-run       # Preview what will be deleted
+trustify sbom duplicates delete                 # Delete all duplicates
+trustify sbom duplicates delete -j 16           # Faster with 16 concurrent requests
+trustify sbom duplicates delete --input out.json # Use custom input file
 ```
-
-**Options:**
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--input` | `duplicates.json` | Input file from `duplicates find` |
-| `-j, --concurrency` | 8 | Number of concurrent delete requests |
-| `--dry-run` | false | Preview deletions without executing |
-
-**Examples:**
-
-```bash
-# Dry run first (recommended)
-trustify -u http://localhost:8080 sbom duplicates delete --dry-run
-
-# Actually delete
-trustify -u http://localhost:8080 sbom duplicates delete
-
-# With higher concurrency
-trustify -u http://localhost:8080 sbom duplicates delete -j 16
-
-# From a specific file
-trustify -u http://localhost:8080 sbom duplicates delete --input my-duplicates.json
-```
-
-**Output:**
-
-```
-Deleting 150 duplicates with 8 concurrent requests...
-Deleted: abc123 (document_id: urn:example:sbom-1.0)
-Deleted: def456 (document_id: urn:example:sbom-1.0)
-...
-Deleted 150 duplicate(s), 0 failed out of 150 total
-```
-
----
-
-## Complete Workflow Example
-
-```bash
-# 1. Configure authentication
-export TRUSTIFY_URL=http://localhost:8080
-export TRUSTIFY_SSO_URL=http://sso.example.com/realms/trustify
-export TRUSTIFY_CLIENT_ID=my-client
-export TRUSTIFY_CLIENT_SECRET=my-secret
-
-# 2. Find duplicates
-trustify sbom duplicates find -j 8
-# Output: Found 150 document(s) with duplicates. Saved to duplicates.json
-
-# 3. Review the duplicates file
-cat duplicates.json | jq '.[0]'
-
-# 4. Dry run to see what would be deleted
-trustify sbom duplicates delete --dry-run
-
-# 5. Delete duplicates
-trustify sbom duplicates delete -j 16
-# Output: Deleted 300 duplicate(s), 0 failed out of 300 total
-```
-
-## API Reference
-
-This CLI interacts with the Trustify API. See the [OpenAPI specification](https://raw.githubusercontent.com/guacsec/trustify/refs/heads/main/openapi.yaml) for full API documentation.
-
-## License
-
-Apache License, Version 2.0
