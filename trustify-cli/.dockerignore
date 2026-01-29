@@ -1,9 +1,0 @@
-target/
-.git/
-.gitignore
-*.md
-LICENSE
-Dockerfile
-.dockerignore
-.env
-duplicates.json
