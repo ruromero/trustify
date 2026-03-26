@@ -73,8 +73,7 @@ impl PurlKey {
 }
 
 struct InputPurl {
-    purl_string: String,
-    key: PurlKey,
+    purl: Purl,
     input_version: semver::Version,
 }
 
@@ -91,8 +90,7 @@ impl InputPurl {
             })
             .ok()?;
         Some(Self {
-            purl_string: purl.to_string(),
-            key: PurlKey::from_purl(purl),
+            purl: purl.clone(),
             input_version,
         })
     }
@@ -477,7 +475,7 @@ impl PurlService {
         let base_purls = Self::fetch_base_purls(&input_purls, connection).await?;
         if base_purls.is_empty() {
             for ip in &input_purls {
-                recommendations.insert(ip.purl_string.clone(), Vec::new());
+                recommendations.insert(ip.purl.to_string(), Vec::new());
             }
             return Ok(recommendations);
         }
@@ -494,8 +492,9 @@ impl PurlService {
         let pattern = Regex::new("redhat-[0-9]+$").unwrap();
 
         for ip in &input_purls {
-            let Some(base) = base_purl_map.get(&ip.key) else {
-                recommendations.insert(ip.purl_string.clone(), Vec::new());
+            let key = PurlKey::from_purl(&ip.purl);
+            let Some(base) = base_purl_map.get(&key) else {
+                recommendations.insert(ip.purl.to_string(), Vec::new());
                 continue;
             };
 
@@ -507,9 +506,9 @@ impl PurlService {
 
             if let Some(winner_vp) = highest {
                 let entry = self.build_recommend_entry(winner_vp, connection).await?;
-                recommendations.insert(ip.purl_string.clone(), vec![entry]);
+                recommendations.insert(ip.purl.to_string(), vec![entry]);
             } else {
-                recommendations.insert(ip.purl_string.clone(), Vec::new());
+                recommendations.insert(ip.purl.to_string(), Vec::new());
             }
         }
 
@@ -523,8 +522,9 @@ impl PurlService {
         let mut condition = Condition::any();
         let mut seen_keys: HashSet<PurlKey> = HashSet::new();
         for ip in input_purls {
-            if seen_keys.insert(ip.key.clone()) {
-                condition = condition.add(ip.key.as_condition());
+            let key = PurlKey::from_purl(&ip.purl);
+            if seen_keys.insert(key.clone()) {
+                condition = condition.add(key.as_condition());
             }
         }
         Ok(base_purl::Entity::find()
