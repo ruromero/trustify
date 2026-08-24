@@ -5,11 +5,13 @@ use std::str::FromStr;
     Clone,
     Copy,
     Debug,
+    Default,
     strum::EnumString,
     strum::IntoStaticStr,
     strum::Display,
     strum::VariantNames,
     utoipa::ToSchema,
+    schemars::JsonSchema,
     PartialEq,
     Eq,
 )]
@@ -28,6 +30,7 @@ pub enum Format {
     // These should be resolved to one of the above before loading
     Advisory,
     SBOM,
+    #[default]
     Unknown,
 }
 

@@ -14,7 +14,7 @@ use tracing::instrument;
 use trustify_entity::labels::Labels;
 use trustify_module_ingestor::{
     graph::Graph,
-    service::{Cache, Format, IngestorService},
+    service::{Cache, IngestorService},
 };
 
 struct ManifestEntry {
@@ -255,7 +255,7 @@ impl super::ImportRunner {
                 .db
                 .transaction(async |tx| {
                     ingestor
-                        .ingest(&body, Format::OSV, labels, None, Cache::Skip, tx)
+                        .ingest(&body, importer.format, labels, None, Cache::Skip, tx)
                         .await
                 })
                 .await
@@ -281,11 +281,96 @@ impl super::ImportRunner {
     }
 }
 
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn parse_manifest_valid() {
+        let data = b"file1.json,abc123,100\nfile2.json,def456,200\n";
+        let entries = parse_manifest(data).unwrap();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].file, "file1.json");
+        assert_eq!(entries[0].sha256, "abc123");
+        assert_eq!(entries[0].size, 100);
+        assert_eq!(entries[1].file, "file2.json");
+    }
+
+    #[test]
+    fn parse_manifest_skips_blank_lines() {
+        let data = b"\nfile1.json,abc123,100\n\n";
+        let entries = parse_manifest(data).unwrap();
+        assert_eq!(entries.len(), 1);
+    }
+
+    #[test]
+    fn parse_manifest_rejects_malformed_line() {
+        let data = b"file1.json,abc123";
+        assert!(parse_manifest(data).is_err());
+    }
+
+    #[test]
+    fn parse_manifest_rejects_invalid_size() {
+        let data = b"file1.json,abc123,notanumber";
+        assert!(parse_manifest(data).is_err());
+    }
+
+    #[test]
+    fn matches_patterns_empty_matches_all() {
+        assert!(matches_patterns("anything.json", &[]));
+    }
+
+    #[test]
+    fn matches_patterns_glob() {
+        let patterns = vec!["*.json".to_string()];
+        assert!(matches_patterns("file.json", &patterns));
+        assert!(!matches_patterns("file.xml", &patterns));
+    }
+
+    #[test]
+    fn matches_patterns_substring() {
+        let patterns = vec!["advisory".to_string()];
+        assert!(matches_patterns("path/to/advisory-001.json", &patterns));
+        assert!(!matches_patterns("path/to/sbom.json", &patterns));
+    }
+
+    #[test]
+    fn glob_match_star() {
+        assert!(glob_match("*.json", "test.json"));
+        assert!(!glob_match("*.json", "test.xml"));
+        assert!(glob_match("dir/*", "dir/file.txt"));
+    }
+
+    #[test]
+    fn glob_match_question_mark() {
+        assert!(glob_match("file?.json", "file1.json"));
+        assert!(!glob_match("file?.json", "file12.json"));
+    }
+
+    #[test]
+    fn glob_match_exact() {
+        assert!(glob_match("exact", "exact"));
+        assert!(!glob_match("exact", "other"));
+    }
+
+    #[test]
+    fn verify_sha256_valid() {
+        let data = b"hello world";
+        let expected = "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9";
+        assert!(verify_sha256(data, expected));
+    }
+
+    #[test]
+    fn verify_sha256_mismatch() {
+        assert!(!verify_sha256(b"hello world", "0000000000000000"));
+    }
+}
+
 async fn fetch_with_retries(
     client: &reqwest::Client,
     url: &str,
     max_retries: usize,
-) -> Result<Vec<u8>, reqwest::Error> {
+) -> Result<Vec<u8>, anyhow::Error> {
     let mut last_err = None;
     for attempt in 0..=max_retries {
         if attempt > 0 {
@@ -296,5 +381,7 @@ async fn fetch_with_retries(
             Err(e) => last_err = Some(e),
         }
     }
-    Err(last_err.unwrap())
+    Err(last_err
+        .map(anyhow::Error::from)
+        .unwrap_or_else(|| anyhow::anyhow!("fetch failed with no attempts")))
 }

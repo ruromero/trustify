@@ -1,4 +1,5 @@
 use super::*;
+use trustify_module_ingestor::service::Format;
 
 #[derive(
     Clone,
@@ -23,6 +24,10 @@ pub struct PulpImporter {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub auth: Option<PulpAuth>,
 
+    /// Expected format of the files (auto-detected if not specified)
+    #[serde(default, skip_serializing_if = "is_default_format")]
+    pub format: Format,
+
     /// Only process files matching these patterns (glob-style)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub only_patterns: Vec<String>,
@@ -30,6 +35,10 @@ pub struct PulpImporter {
     /// Number of retries when fetching individual files
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fetch_retries: Option<usize>,
+}
+
+fn is_default_format(f: &Format) -> bool {
+    *f == Format::Unknown
 }
 
 #[derive(

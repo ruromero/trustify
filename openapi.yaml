@@ -5257,6 +5257,12 @@ components:
         properties:
           quay:
             $ref: '#/components/schemas/QuayImporter'
+      - type: object
+        required:
+        - pulp
+        properties:
+          pulp:
+            $ref: '#/components/schemas/PulpImporter'
     ImporterData:
       type: object
       required:
@@ -6464,6 +6470,62 @@ components:
           format: int32
           description: The total number of items to be processed.
           minimum: 0
+    PulpAuth:
+      oneOf:
+      - type: object
+        required:
+        - username
+        - password
+        - type
+        properties:
+          password:
+            type: string
+          type:
+            type: string
+            enum:
+            - basic
+          username:
+            type: string
+      - type: object
+        required:
+        - token
+        - type
+        properties:
+          token:
+            type: string
+          type:
+            type: string
+            enum:
+            - bearer
+    PulpImporter:
+      allOf:
+      - $ref: '#/components/schemas/CommonImporter'
+      - type: object
+        required:
+        - source
+        properties:
+          auth:
+            oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/PulpAuth'
+              description: Authentication credentials for the source
+          fetchRetries:
+            type:
+            - integer
+            - 'null'
+            description: Number of retries when fetching individual files
+            minimum: 0
+          format:
+            $ref: '#/components/schemas/Format'
+            description: Expected format of the files (auto-detected if not specified)
+          onlyPatterns:
+            type: array
+            items:
+              type: string
+            description: Only process files matching these patterns (glob-style)
+          source:
+            type: string
+            description: The base URL of the Pulp repository (must serve a `PULP_MANIFEST` file)
     Purl:
       type: string
       format: uri

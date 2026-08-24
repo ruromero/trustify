@@ -109,6 +109,18 @@
         "quay"
       ],
       "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "pulp": {
+          "$ref": "#/$defs/PulpImporter"
+        }
+      },
+      "required": [
+        "pulp"
+      ],
+      "additionalProperties": false
     }
   ],
   "$defs": {
@@ -617,6 +629,127 @@
       },
       "required": [
         "period"
+      ]
+    },
+    "PulpImporter": {
+      "type": "object",
+      "properties": {
+        "disabled": {
+          "description": "A flag to disable the importer, without deleting it.",
+          "type": "boolean",
+          "default": false
+        },
+        "period": {
+          "description": "The period the importer should be run.",
+          "$ref": "#/$defs/HumantimeSerde"
+        },
+        "description": {
+          "description": "A description for users.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "labels": {
+          "description": "Labels which will be applied to the ingested documents.",
+          "$ref": "#/$defs/Labels"
+        },
+        "source": {
+          "description": "The base URL of the Pulp repository (must serve a `PULP_MANIFEST` file)",
+          "type": "string"
+        },
+        "auth": {
+          "description": "Authentication credentials for the source",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PulpAuth"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "format": {
+          "description": "Expected format of the files (auto-detected if not specified)",
+          "$ref": "#/$defs/Format"
+        },
+        "onlyPatterns": {
+          "description": "Only process files matching these patterns (glob-style)",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fetchRetries": {
+          "description": "Number of retries when fetching individual files",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "period",
+        "source"
+      ]
+    },
+    "PulpAuth": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string"
+            },
+            "password": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "basic"
+            }
+          },
+          "required": [
+            "type",
+            "username",
+            "password"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "token": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "bearer"
+            }
+          },
+          "required": [
+            "type",
+            "token"
+          ]
+        }
+      ]
+    },
+    "Format": {
+      "type": "string",
+      "enum": [
+        "OSV",
+        "CSAF",
+        "CVE",
+        "NVD",
+        "SPDX",
+        "CycloneDX",
+        "ClearlyDefinedCuration",
+        "ClearlyDefined",
+        "CweCatalog",
+        "Advisory",
+        "SBOM",
+        "Unknown"
       ]
     }
   }
