@@ -73,6 +73,7 @@ mod m0002280_backfill_sbom_suppliers;
 mod m0002290_create_exploit_intelligence_job;
 mod m0002300_create_exploit;
 mod m0002360_pythonver_cmp_parallel_restricted;
+mod m0002370_importer_quay_auth;
 mod m0002380_version_function_parallelism;
 
 pub trait MigratorExt: Send {
@@ -162,6 +163,7 @@ impl MigratorExt for Migrator {
             .normal(m0002290_create_exploit_intelligence_job::Migration)
             .normal(m0002300_create_exploit::Migration)
             .normal(m0002360_pythonver_cmp_parallel_restricted::Migration)
+            .normal(m0002370_importer_quay_auth::Migration)
             .normal(m0002380_version_function_parallelism::Migration)
     }
 }
