@@ -122,7 +122,7 @@ impl InputPurl {
 
 pub struct PurlService {
     cache: PaginationCache,
-    pub(crate) recommend_patterns: Vec<Regex>,
+    recommend_patterns: Vec<Regex>,
 }
 
 impl PurlService {
@@ -594,6 +594,10 @@ impl PurlService {
         }
 
         Ok(recommendations)
+    }
+
+    pub fn recommend_patterns(&self) -> &Vec<Regex> {
+        &self.recommend_patterns
     }
 
     /// Batch-loads vulnerability statuses for the winning versioned PURLs, grouped by base PURL ID.

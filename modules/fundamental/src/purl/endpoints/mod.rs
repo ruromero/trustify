@@ -120,7 +120,7 @@ mod v2 {
         request: web::Json<RecommendRequest>,
         _: Require<ReadAdvisory>,
     ) -> Result<impl Responder, Error> {
-        if purl_service.recommend_patterns.is_empty() {
+        if purl_service.recommend_patterns().is_empty() {
             return Ok(HttpResponse::ServiceUnavailable().json(serde_json::json!({
                 "status": 503,
                 "code": "FEATURE_UNCONFIGURED",
@@ -155,7 +155,7 @@ mod v3 {
         request: web::Json<RecommendRequest>,
         _: Require<ReadAdvisory>,
     ) -> Result<impl Responder, Error> {
-        if purl_service.recommend_patterns.is_empty() {
+        if purl_service.recommend_patterns().is_empty() {
             return Ok(HttpResponse::ServiceUnavailable().json(serde_json::json!({
                 "status": 503,
                 "code": "FEATURE_UNCONFIGURED",
