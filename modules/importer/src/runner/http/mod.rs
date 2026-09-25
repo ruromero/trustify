@@ -34,6 +34,26 @@ use trustify_module_ingestor::{
 use url::Url;
 use walker_common::fetcher::{FetchAuthentication, Fetcher, FetcherOptions};
 
+/// Fetch `url` using `auth_client` whose redirect policy stops at cross-host hops,
+/// then re-fetch the redirect target with `plain_client` (no credentials).
+/// This prevents API-key headers from being forwarded to CDN servers.
+async fn fetch_file_protected(
+    auth_client: &reqwest::Client,
+    plain_client: &reqwest::Client,
+    url: &str,
+) -> Result<bytes::Bytes, walker_common::fetcher::Error> {
+    let response = auth_client.get(url).send().await?;
+    if response.status().is_redirection()
+        && let Some(location) = response
+            .headers()
+            .get(reqwest::header::LOCATION)
+            .and_then(|v| v.to_str().ok())
+    {
+        return Ok(plain_client.get(location).send().await?.bytes().await?);
+    }
+    Ok(response.bytes().await?)
+}
+
 impl super::ImportRunner {
     /// Run a single HTTP import pass.
     ///
@@ -57,6 +77,53 @@ impl super::ImportRunner {
 
         // Build a reqwest client, adding authentication headers when configured.
         let fetcher = build_fetcher(&http, &self.credential_config).await?;
+
+        // For ApiKey auth, build a second pair of clients so file downloads never
+        // forward the credential to CDN servers on cross-host redirects.
+        let api_key_clients: Option<(reqwest::Client, reqwest::Client)> = match &http.auth {
+            Some(auth) => match &auth.method {
+                AuthMethod::ApiKey {
+                    header,
+                    value: cred,
+                } => {
+                    let v = cred
+                        .resolve(&self.credential_config, ())
+                        .map_err(|e| ScannerError::Critical(e.into()))?;
+                    let header_name = reqwest::header::HeaderName::from_bytes(header.as_bytes())
+                        .map_err(|e| ScannerError::Critical(e.into()))?;
+                    let mut header_value = reqwest::header::HeaderValue::from_str(v.trim())
+                        .map_err(|e| ScannerError::Critical(e.into()))?;
+                    header_value.set_sensitive(true);
+
+                    let mut default_headers = reqwest::header::HeaderMap::new();
+                    default_headers.insert(header_name, header_value);
+
+                    let auth_client = reqwest::Client::builder()
+                        .default_headers(default_headers)
+                        .redirect(reqwest::redirect::Policy::custom(|attempt| {
+                            let same_origin = attempt.previous().last().map(|prev| {
+                                prev.host_str() == attempt.url().host_str()
+                                    && prev.port() == attempt.url().port()
+                            }) == Some(true);
+                            if same_origin {
+                                attempt.follow()
+                            } else {
+                                attempt.stop()
+                            }
+                        }))
+                        .timeout(std::time::Duration::from_secs(30))
+                        .build()
+                        .map_err(|e| ScannerError::Critical(e.into()))?;
+                    let plain_client = reqwest::Client::builder()
+                        .timeout(std::time::Duration::from_secs(30))
+                        .build()
+                        .map_err(|e| ScannerError::Critical(e.into()))?;
+                    Some((auth_client, plain_client))
+                }
+                _ => None,
+            },
+            None => None,
+        };
 
         let source_url = Url::parse(&http.source).map_err(|e| ScannerError::Critical(e.into()))?;
 
@@ -95,7 +162,12 @@ impl super::ImportRunner {
                 continue;
             }
 
-            let data = match fetcher.fetch::<bytes::Bytes>(file.url.as_str()).await {
+            let fetch_result = if let Some((auth_client, plain_client)) = &api_key_clients {
+                fetch_file_protected(auth_client, plain_client, file.url.as_str()).await
+            } else {
+                fetcher.fetch::<bytes::Bytes>(file.url.as_str()).await
+            };
+            let data = match fetch_result {
                 Ok(b) => b,
                 Err(err) => {
                     report.lock().add_error(
