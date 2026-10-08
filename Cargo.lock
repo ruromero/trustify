@@ -2015,7 +2015,7 @@ source = "git+https://github.com/scm-rs/csaf-rs?branch=main#3b95cd16d78de713a94e
 dependencies = [
  "chrono",
  "cpe",
- "packageurl 0.7.1",
+ "packageurl",
  "serde",
  "serde_json",
  "serde_with",
@@ -5294,16 +5294,6 @@ dependencies = [
 
 [[package]]
 name = "packageurl"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "35da99768af1ae8830ccf30d295db0e09c24bcfda5a67515191dd4b773f6d82a"
-dependencies = [
- "percent-encoding",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "packageurl"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7719f5f3fc6fbf28f1b6b3d1cddd43958116db8f2e6c97e520757fbb490fcbf"
@@ -7082,7 +7072,7 @@ dependencies = [
  "regex",
  "regex-syntax",
  "sha1collisiondetection",
- "thiserror 2.0.21",
+ "thiserror 1.0.69",
  "xxhash-rust",
 ]
 
@@ -8715,7 +8705,7 @@ dependencies = [
  "moka",
  "native-tls",
  "opentelemetry",
- "packageurl 0.6.0",
+ "packageurl",
  "pem",
  "rand 0.10.3",
  "regex",
@@ -8882,7 +8872,7 @@ dependencies = [
  "log",
  "moka",
  "opentelemetry",
- "packageurl 0.6.0",
+ "packageurl",
  "parking_lot",
  "petgraph",
  "rstest",
@@ -8939,7 +8929,7 @@ dependencies = [
  "opentelemetry-otlp",
  "opentelemetry_sdk",
  "osv",
- "packageurl 0.6.0",
+ "packageurl",
  "regex",
  "roxmltree",
  "rstest",
@@ -9060,7 +9050,7 @@ dependencies = [
  "lenient_semver",
  "log",
  "osv",
- "packageurl 0.6.0",
+ "packageurl",
  "parking_lot",
  "quick-xml",
  "rand 0.10.3",
