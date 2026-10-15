@@ -84,16 +84,24 @@ bare name would conflict with or be confused for another name already in scope (
 [Qualified Names for Common Types](#import-style--qualified-names-for-common-types)).
 
 ```rust
-// Good — imported
+// Good — imported type
 use std::env::VarError;
 fn foo() -> Result<(), VarError> { ... }
 
+// Good — imported function
+use std::iter::once;
+let ids = once(winner.base.id);
+
 // Avoid — inline qualification when there is no conflict
 fn foo() -> Result<(), std::env::VarError> { ... }
+
+// Avoid — inline function call without import
+let ids = std::iter::once(winner.base.id);
 ```
 
-This is a reviewer convention; the clippy `absolute_paths` lint only enforces 4+ segment
-paths (see [Absolute Paths](#import-style--absolute-paths)).
+This applies to both types and function calls. The clippy `absolute_paths` lint only
+enforces 4+ segment paths (see [Absolute Paths](#import-style--absolute-paths)), but
+this convention applies regardless of segment count.
 
 ## Naming Conventions
 
@@ -312,7 +320,18 @@ where the collection type is already known.
 
 Prefer plain constructors (`HashMap::new()`, `Vec::new()`) over turbofish-annotated ones
 (`HashMap::<K, V>::new()`) when the compiler can infer the type from context — for example,
-from the function's return type or from a subsequent assignment.
+from the function's return type or from a subsequent assignment. This also means avoiding
+redundant `let` type annotations on constructors:
+
+```rust
+// Good — compiler infers HashMap<Uuid, Vec<StatusInfo>> from .insert() calls
+let mut statuses = HashMap::new();
+statuses.insert(id, infos);
+
+// Avoid — redundant annotation when subsequent usage constrains the type
+let mut statuses: HashMap<Uuid, Vec<StatusInfo>> = HashMap::new();
+statuses.insert(id, infos);
+```
 
 The turbofish is acceptable when the compiler cannot infer the type. Common cases:
 
