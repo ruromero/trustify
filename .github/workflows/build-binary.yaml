@@ -155,6 +155,21 @@ jobs:
 
       - uses: ./.github/actions/setup-console
 
+      - name: Build options
+        shell: bash
+        run: |
+          # The build, the SBOM and the SBOM gate must describe the same binary, so the feature
+          # selection lives in one place. It is expanded unquoted below on purpose: one word per
+          # flag.
+
+          features="--features trustify-trustd/trustify-ui,trustify-trustd/ui-console"
+
+          if [[ "${{ matrix.edition }}" == "-pm" ]]; then
+            features="$features --features pm"
+          fi
+
+          echo "BUILD_FEATURES=$features ${{ matrix.args }}" >> "$GITHUB_ENV"
+
       - name: Build | Build
         shell: bash
         env:
@@ -172,13 +187,7 @@ jobs:
 
           # build options
 
-          OPTS="--no-default-features --features trustify-trustd/trustify-ui,trustify-trustd/ui-console --release"
-
-          if [[ "${{ matrix.edition }}" == "-pm" ]]; then
-            OPTS="$OPTS --features pm"
-          fi
-
-          OPTS="$OPTS ${{ matrix.args }}"
+          OPTS="--no-default-features ${BUILD_FEATURES} --release"
 
           if [[ -n "${{ matrix.target }}" ]]; then
             OPTS="$OPTS --target=${{ matrix.target }}"
@@ -196,10 +205,25 @@ jobs:
       - name: Create SBOM
         shell: bash
         run: |
-          cargo cyclonedx -v --spec-version 1.5 --format json --describe binaries --target "${{ matrix.target }}"
+          cargo cyclonedx -v --spec-version 1.5 --format json --describe binaries \
+            --no-default-features ${BUILD_FEATURES} --target "${{ matrix.target }}"
 
           mv trustd/trustd_bin.cdx.json "upload/trustd${{ matrix.edition }}-${{ inputs.version }}-${{ matrix.target }}.cdx.json"
           mv xtask/xtask_bin.cdx.json "upload/xtask${{ matrix.edition }}-${{ inputs.version }}-${{ matrix.target }}.cdx.json"
+
+      - name: Verify SBOM
+        shell: bash
+        run: |
+          # The SBOM is generated with the same features as the build, so it should already match
+          # it. The gate enforces that: a compiled component that is missing from the SBOM fails
+          # the release, and anything the resolver reports that this build does not compile is
+          # removed before publishing.
+
+          cargo xtask sbom-gate \
+            --sbom "upload/trustd${{ matrix.edition }}-${{ inputs.version }}-${{ matrix.target }}.cdx.json" \
+            --no-default-features ${BUILD_FEATURES} \
+            --target "${{ matrix.target }}" \
+            --prune
 
       - name: Move binary
         shell: bash

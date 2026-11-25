@@ -8,6 +8,7 @@ mod dataset;
 mod log;
 mod openapi;
 mod precommit;
+mod sbom;
 mod schema;
 
 #[derive(Debug, Parser)]
@@ -23,6 +24,7 @@ impl Xtask {
             Command::GenerateDump(command) => command.run().await,
             Command::GenerateSchemas(command) => command.run(),
             Command::Precommit(command) => command.run().await,
+            Command::SbomGate(command) => command.run().await,
         }
     }
 }
@@ -37,6 +39,8 @@ pub enum Command {
     GenerateSchemas(schema::GenerateSchema),
     /// Run precommit checks
     Precommit(precommit::Precommit),
+    /// Check that an SBOM describes the binary it was built from
+    SbomGate(sbom::SbomGate),
 }
 
 #[tokio::main]
